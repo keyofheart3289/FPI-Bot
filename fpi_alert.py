@@ -11,8 +11,8 @@ from datetime import datetime, timezone
 TELEGRAM_TOKEN   = os.environ["TELEGRAM_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-SYMBOLS   = ["ETHUSDT", "BTCUSDT", "SOLUSDT"]
-TIMEFRAME = "1h"          # đổi thành 1m, 15m tuỳ chart đang xài
+SYMBOLS = ["ETH-USDT-SWAP", "BTC-USDT-SWAP", "SOL-USDT-SWAP"]
+TIMEFRAME = "1H"   # OKX dùng chữ hoa: 1H, 5m, 15m, 4H
 
 # FPI params — khớp với indicator
 Z_LEN, WICK_LEN, TDR_LEN = 20, 10, 14
@@ -24,13 +24,18 @@ ATR_FAST, ATR_SLOW, REGIME_MIN = 14, 50, 0.75
 STATE_FILE = "state.json"
 
 # ── DATA FETCH ────────────────────────────────────────────────────────
-def fetch_candles(symbol: str, interval: str, limit: int = 200):
-    url = "https://api.binance.com/api/v3/klines"
-    r = requests.get(url, params={"symbol": symbol,
-                                   "interval": interval,
-                                   "limit": limit}, timeout=10)
+def fetch_candles(symbol: str, interval: str, limit: int = 300):
+    # OKX public API — không cần key, không bị chặn
+    url = "https://www.okx.com/api/v5/market/candles"
+    r = requests.get(url, params={
+        "instId": symbol,
+        "bar": interval,
+        "limit": str(limit)
+    }, timeout=10)
     r.raise_for_status()
-    data = r.json()
+    data = r.json()["data"]
+    # OKX trả ngược (mới nhất trước) → đảo lại
+    data = list(reversed(data))
     return {
         "o": np.array([float(c[1]) for c in data]),
         "h": np.array([float(c[2]) for c in data]),
