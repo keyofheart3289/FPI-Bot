@@ -1,0 +1,40 @@
+name: FPI Alert Bot
+
+on:
+  schedule:
+    - cron: "2 * * * *"   # chạy lúc HH:02 mỗi giờ — 2 phút sau nến đóng
+  workflow_dispatch:          # chạy tay để test
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Restore state từ lần chạy trước (tránh alert trùng)
+      - name: Restore state cache
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: fpi-state-${{ github.run_number }}
+          restore-keys: fpi-state-
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install requests numpy
+
+      - name: Run FPI Alert
+        env:
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python fpi_alert.py
+
+      # Save state cho lần chạy tiếp
+      - name: Save state cache
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: fpi-state-${{ github.run_number }}
